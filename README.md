@@ -5,7 +5,7 @@
 ![Status](https://img.shields.io/badge/status-Working%20Release-0f9c6b?style=for-the-badge)
 ![Focus](https://img.shields.io/badge/focus-Smart%20Patch%20Selection-7c3aed?style=for-the-badge)
 
-> A polished Windows desktop downloader built around the modular Project Reforged experience for World of Warcraft 1.12.
+> Built to automate the downloading of Project Reforged patch files for World of Warcraft 1.12.
 
 ## Why This Exists
 
