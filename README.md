@@ -70,8 +70,9 @@ This downloader is meant to make working with those modules easier.
 | Smart selection | Automatically keeps `PATCH-B`, `PATCH-D`, and `PATCH-E` linked together |
 | Variant safety | Only allows one `PATCH-L` variant and one `PATCH-U` variant at a time |
 | Detail panel | Explains what a patch does, what rules apply, and where it will be saved |
-| Download workflow | Downloads directly to your selected folder and can skip or overwrite existing files |
+| Download workflow | Downloads directly to your selected folder and can skip, version-check, or overwrite existing files |
 | Presets | Includes quick actions for core patches, linked world set, and a ready-made preset |
+| Update tracking | Stores a local manifest so unchanged files do not need to be downloaded again |
 
 ## Smart Rules
 
@@ -81,6 +82,22 @@ The app includes guardrails to make patch selection easier and safer:
 - Only one `PATCH-L` variant can stay selected at a time
 - Only one `PATCH-U` variant can stay selected at a time
 - Compatibility warnings appear before download when a patch is usually paired with another patch
+
+## Version Tracking
+
+The app now keeps a local manifest file in the download folder:
+
+```text
+.project-reforged-manifest.tsv
+```
+
+When version checking is enabled, the downloader compares the saved manifest against the live patch server metadata using:
+
+- `ETag`
+- `Last-Modified`
+- `Content-Length`
+
+If a tracked file is unchanged, the app skips the download automatically.
 
 ## Installation Notes From Project Reforged
 
