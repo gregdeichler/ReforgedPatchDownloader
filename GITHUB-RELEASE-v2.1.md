@@ -17,6 +17,11 @@
 
 Use the `ProjectReforgedPatchDownloader-v2.1.zip` release asset.
 
+## Runtime Requirement
+
+- requires the Windows .NET 10 Desktop Runtime
+- if the app does not launch, install the current .NET Desktop Runtime and try again
+
 ## Notes
 
 - the app is for Windows

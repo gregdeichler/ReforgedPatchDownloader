@@ -18,6 +18,10 @@ Main Features
 - Clean stop for downloads in progress
 - Exit warning while downloading
 
+Runtime Requirement
+- This build requires the Windows .NET 10 Desktop Runtime
+- If the app does not launch, install the current .NET Desktop Runtime and try again
+
 How To Use
 1. Run ReforgedPatchDownloaderApp.exe
 2. Choose your patch folder

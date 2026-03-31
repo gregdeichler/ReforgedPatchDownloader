@@ -75,6 +75,12 @@ Rows with live updates are highlighted so they stand out immediately.
 - `HttpClient`
 - `System.Text.Json`
 
+## Runtime Requirement
+
+This release build requires the Windows `.NET 10 Desktop Runtime` to be installed.
+
+If `ReforgedPatchDownloaderApp.exe` does not start on a machine, install the current `.NET Desktop Runtime` for Windows and try again.
+
 ## Project Layout
 
 - `src/` - WPF UI, models, downloader service, settings store
