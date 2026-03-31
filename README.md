@@ -1,148 +1,109 @@
 # Project Reforged Patch Downloader
 
 ![Platform](https://img.shields.io/badge/platform-Windows-1f6cf0?style=for-the-badge)
-![UI](https://img.shields.io/badge/UI-WinForms-0f172a?style=for-the-badge)
-![Status](https://img.shields.io/badge/status-Working%20Release-0f9c6b?style=for-the-badge)
-![Focus](https://img.shields.io/badge/focus-Smart%20Patch%20Selection-7c3aed?style=for-the-badge)
+![UI](https://img.shields.io/badge/UI-WPF-17314d?style=for-the-badge)
+![Runtime](https://img.shields.io/badge/runtime-.NET%2010-c89b3c?style=for-the-badge)
+![Status](https://img.shields.io/badge/status-v2.1%20Release-1e884e?style=for-the-badge)
 
-> An unofficial patch downloader for Project Reforged on Windows.
+> A fast Windows desktop downloader for Project Reforged patches, with live catalog checks, version tracking, and update alerts.
 
-## Why This Exists
+## Overview
 
-Project Reforged describes itself as a "carefully curated high-definition visual overhaul" for the World of Warcraft 1.12 client, designed to preserve the original artistic identity while improving visual fidelity, stability, and immersion.
+Project Reforged is a modular HD visual overhaul for the World of Warcraft 1.12 client. Its module-based design is powerful, but it also means players need to keep track of patch groups, linked downloads, required dependencies, update checks, and local install state.
 
-That modular approach is powerful, but it also means users need to keep track of:
+This app turns that workflow into a purpose-built Windows desktop experience.
 
-- which modules exist
-- which patches belong together
-- which variants should not be installed at the same time
-- where each file needs to go
+It can:
 
-This app turns that process into a cleaner Windows experience:
-
-- browse the patch library in a dedicated GUI
-- search and filter the list quickly
-- auto-handle linked patch groups
-- prevent conflicting variant selections
-- download directly into your chosen patch folder
-
-## About Project Reforged
-
-Project Reforged is a long-term visual overhaul project for the WoW 1.12 client. According to the official site, it focuses on raising visual fidelity without sacrificing the atmosphere of the original game.
-
-The site currently lists:
-
-- Current stable version: `v5.3.2`
-- Release status: `Stable`
-- Updated: `2026-03-27`
-- Recently updated modules: `A`, `C`, `O`, `U`, `V`
-
-The project is presented as a modular architecture built around optional patch modules such as:
-
-- `PATCH-A` for player characters and NPCs
-- `PATCH-B`, `PATCH-D`, and `PATCH-E` for the world and environment
-- `PATCH-C` for creatures
-- `PATCH-G` for gear and weapons
-- `PATCH-I` for interface updates
-- `PATCH-M` for maps and loading screens
-- `PATCH-O` for raid visuals
-- `PATCH-S` for sounds and music
-- `PATCH-U` for Ultra HD character textures
-- `PATCH-V` for spell visual effects
-
-This downloader is meant to make working with those modules easier.
+- load the live patch catalog from [projectreforged.github.io](https://projectreforged.github.io/)
+- show patch names, descriptions, versions, dates, and file sizes
+- alert you when downloaded patches have newer live versions available
+- keep linked patches synchronized automatically
+- help you avoid conflicting variant selections
+- download directly into your patch folder with visible queue progress
 
 ## Screenshots
 
-### Clean desktop layout
+### Patch library and update-aware browsing
 
-![Project Reforged Patch Downloader empty state](docs/screenshots/app-empty-state.png)
+![Project Reforged Patch Downloader library view](docs/screenshots/app-v2.1-library.png)
 
-### Preset selection in action
+### Selected patch set and details panel
 
-![Project Reforged Patch Downloader preset selection](docs/screenshots/app-selected-preset.png)
+![Project Reforged Patch Downloader selected patch set](docs/screenshots/app-v2.1-selected.png)
 
-## Features
+## Key Features
 
-| Area | What it does |
-| --- | --- |
-| Patch browsing | Shows the available patches in a searchable, filterable desktop list |
-| Smart selection | Automatically keeps `PATCH-B`, `PATCH-D`, and `PATCH-E` linked together |
-| Variant safety | Only allows one `PATCH-L` variant and one `PATCH-U` variant at a time |
-| Detail panel | Explains what a patch does, what rules apply, and where it will be saved |
-| Download workflow | Downloads directly to your selected folder and can skip, version-check, or overwrite existing files |
-| Presets | Includes quick actions for core patches, linked world set, and a ready-made preset |
-| Update tracking | Stores a local manifest so unchanged files do not need to be downloaded again |
+- Live catalog refresh from the Project Reforged website
+- Search and filter tools for descriptions, patch ids, variants, and status
+- Update highlighting for tracked local downloads
+- Byte-aware download progress with queue position and active file details
+- Clean stop support for active downloads
+- Exit warning while a download is in progress
+- Clickable `What Changed` panel that jumps to updated patches
+- `Open Installed File` action for the selected patch
+- Local manifest tracking using `.project-reforged-manifest-v2.json`
+- Saved folder path, selected patches, and grid column widths between launches
 
 ## Smart Rules
 
-The app includes guardrails to make patch selection easier and safer:
+The app includes a few guardrails so users do not have to memorize every patch rule:
 
-- Checking one of the linked world patches auto-selects the others in that set
-- Only one `PATCH-L` variant can stay selected at a time
-- Only one `PATCH-U` variant can stay selected at a time
-- Compatibility warnings appear before download when a patch is usually paired with another patch
+- `PATCH-B`, `PATCH-D`, and `PATCH-E` stay linked together
+- `PATCH-L` only allows one active variant at a time
+- `PATCH-U` only allows one active variant at a time
+- dependency-heavy patches can prompt to auto-select required modules
+- `Select Recommended` applies a strong baseline preset quickly
 
-## Version Tracking
+## Status Tracking
 
-The app now keeps a local manifest file in the download folder:
+Each patch row can show:
 
-```text
-.project-reforged-manifest.tsv
+- not downloaded
+- downloaded
+- up to date
+- update available
+- other variant installed
+
+Rows with live updates are highlighted so they stand out immediately.
+
+## Tech Stack
+
+- C#
+- .NET 10
+- WPF
+- `HttpClient`
+- `System.Text.Json`
+
+## Project Layout
+
+- `src/` - WPF UI, models, downloader service, settings store
+- `assets/` - application icon and related assets
+- `docs/screenshots/` - README screenshots
+
+## Building
+
+Install the .NET 10 SDK, then run:
+
+```powershell
+dotnet build .\ReforgedPatchDownloaderApp.csproj
 ```
 
-When version checking is enabled, the downloader compares the saved manifest against the live patch server metadata using:
+## Release Files
 
-- `ETag`
-- `Last-Modified`
-- `Content-Length`
-
-If a tracked file is unchanged, the app skips the download automatically.
-
-## Installation Notes From Project Reforged
-
-The official Project Reforged page calls out a few important setup rules that this app tries to respect:
-
-- `PATCH-B`, `PATCH-D`, and `PATCH-E` should be installed together
-- `PATCH-L` requires `PATCH-A`
-- `PATCH-U` requires `PATCH-A` and `PATCH-G`
-- `VanillaHelpers` is listed as mandatory on the official site
-- `DXVK` is strongly recommended on the official site
-
-This downloader currently focuses on the patch modules themselves and does not bundle external dependencies.
-
-## Quick Start
-
-1. Launch `ReforgedPatchDownloaderApp.exe`
-2. Browse, search, or filter the patch list
-3. Choose a destination folder if you do not want the default
-4. Click `Download`
-
-## Default Download Location
-
-```text
-C:\Games\Patches
-```
-
-## Release Contents
+The packaged `v2.1` release includes:
 
 - `ReforgedPatchDownloaderApp.exe`
+- `ReforgedPatchDownloaderApp.dll`
+- `ReforgedPatchDownloaderApp.deps.json`
+- `ReforgedPatchDownloaderApp.runtimeconfig.json`
 - `README.md`
-
-## Build Notes
-
-Source files in this folder:
-
-- `ProgramModern.cs` - current polished WinForms app
-- `Program.cs` - earlier version kept for reference
-- `build.bat` - local build script
-
-## Status
-
-This is a working Windows release build and is ready to use as a standalone Project Reforged patch downloader.
+- `RELEASE-README.txt`
+- `RELEASE-NOTES-v2.1.md`
+- `docs/screenshots/app-v2.1-library.png`
+- `docs/screenshots/app-v2.1-selected.png`
 
 ## Official Project Links
 
 - Project site: [projectreforged.github.io](https://projectreforged.github.io/)
 - Downloads: [projectreforged.github.io/downloads](https://projectreforged.github.io/downloads/)
-- Discord: [Project Reforged Discord](https://discord.gg/jnvkayMbqJ)
