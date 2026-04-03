@@ -3,34 +3,31 @@
 ![Platform](https://img.shields.io/badge/platform-Windows-1f6cf0?style=for-the-badge)
 ![UI](https://img.shields.io/badge/UI-WPF-17314d?style=for-the-badge)
 ![Runtime](https://img.shields.io/badge/runtime-.NET%2010-c89b3c?style=for-the-badge)
-![Status](https://img.shields.io/badge/status-v2.1%20Release-1e884e?style=for-the-badge)
+![Status](https://img.shields.io/badge/status-v2.3%20Release-1e884e?style=for-the-badge)
 
-> A fast Windows desktop downloader for Project Reforged patches, with live catalog checks, version tracking, and update alerts.
+> A fast Windows desktop downloader for Project Reforged patches, with live catalog checks, update alerts, file verification, and repair tools.
 
 ## Overview
 
-Project Reforged is a modular HD visual overhaul for the World of Warcraft 1.12 client. Its module-based design is powerful, but it also means players need to keep track of patch groups, linked downloads, required dependencies, update checks, and local install state.
+Project Reforged is a modular HD visual overhaul for the World of Warcraft 1.12 client. Its module-based structure is powerful, but it also means players need to track linked modules, required dependencies, live updates, and local file state.
 
 This app turns that workflow into a purpose-built Windows desktop experience.
 
 It can:
 
 - load the live patch catalog from [projectreforged.github.io](https://projectreforged.github.io/)
-- show patch names, descriptions, versions, dates, and file sizes
+- show patch descriptions, versions, release dates, and file sizes
 - alert you when downloaded patches have newer live versions available
 - keep linked patches synchronized automatically
 - help you avoid conflicting variant selections
+- verify local files and flag missing or mismatched installs for repair
 - download directly into your patch folder with visible queue progress
 
 ## Screenshots
 
-### Patch library and update-aware browsing
+### Current v2.3 interface
 
-![Project Reforged Patch Downloader library view](docs/screenshots/app-v2.1-library.png)
-
-### Selected patch set and details panel
-
-![Project Reforged Patch Downloader selected patch set](docs/screenshots/app-v2.1-selected.png)
+![Project Reforged Patch Downloader v2.3](docs/screenshots/app-v2.3-main.png)
 
 ## Key Features
 
@@ -41,9 +38,12 @@ It can:
 - Clean stop support for active downloads
 - Exit warning while a download is in progress
 - Clickable `What Changed` panel that jumps to updated patches
-- `Open Installed File` action for the selected patch
+- `Open File Location` action for the selected patch
+- Persistent download and repair history
+- Local file verification with `Needs repair` detection
+- `Repair Selected` for missing or mismatched tracked patch files
+- App update awareness through GitHub releases
 - Local manifest tracking using `.project-reforged-manifest-v2.json`
-- Saved folder path, selected patches, and grid column widths between launches
 
 ## Smart Rules
 
@@ -63,9 +63,10 @@ Each patch row can show:
 - downloaded
 - up to date
 - update available
+- needs repair
 - other variant installed
 
-Rows with live updates are highlighted so they stand out immediately.
+Rows with live updates or repair issues are highlighted so they stand out immediately.
 
 ## Tech Stack
 
@@ -83,7 +84,9 @@ If `ReforgedPatchDownloaderApp.exe` does not start on a machine, install the cur
 
 ## Project Layout
 
-- `src/` - WPF UI, models, downloader service, settings store
+- `src/` - WPF UI, models, parser, downloader services, settings store
+- `tests/` - lightweight parser and version-check regression tests
+- `tools/` - release publishing script
 - `assets/` - application icon and related assets
 - `docs/screenshots/` - README screenshots
 
@@ -97,7 +100,7 @@ dotnet build .\ReforgedPatchDownloaderApp.csproj
 
 ## Release Files
 
-The packaged `v2.1` release includes:
+The packaged `v2.3` release includes:
 
 - `ReforgedPatchDownloaderApp.exe`
 - `ReforgedPatchDownloaderApp.dll`
@@ -105,9 +108,6 @@ The packaged `v2.1` release includes:
 - `ReforgedPatchDownloaderApp.runtimeconfig.json`
 - `README.md`
 - `RELEASE-README.txt`
-- `RELEASE-NOTES-v2.1.md`
-- `docs/screenshots/app-v2.1-library.png`
-- `docs/screenshots/app-v2.1-selected.png`
 
 ## Official Project Links
 

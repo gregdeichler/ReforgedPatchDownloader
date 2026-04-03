@@ -72,6 +72,25 @@ public sealed class PatchManifest
     public List<PatchManifestEntry> Downloads { get; set; } = [];
 }
 
+public sealed class DownloadHistoryEntry
+{
+    public string TimestampUtc { get; set; } = "";
+    public string PatchName { get; set; } = "";
+    public string Variant { get; set; } = "";
+    public string Version { get; set; } = "";
+    public string Result { get; set; } = "";
+    public string FolderPath { get; set; } = "";
+    public string DownloadUrl { get; set; } = "";
+}
+
+public sealed class AppUpdateInfo
+{
+    public string Version { get; set; } = "";
+    public string ReleasePageUrl { get; set; } = "";
+    public string PublishedUtc { get; set; } = "";
+    public string Summary { get; set; } = "";
+}
+
 public sealed class PatchRow : INotifyPropertyChanged
 {
     private bool _isSelected;
@@ -83,6 +102,10 @@ public sealed class PatchRow : INotifyPropertyChanged
     private string _remoteSizeText = "-";
     private string _recommendationText = "-";
     private Brush _recommendationBrush = Brushes.Transparent;
+    private string _updateDetails = "No update differences detected.";
+    private string _guidanceText = "No special install guidance.";
+    private string _releaseNotesText = "Opens the Project Reforged downloads page for the latest patch notes.";
+    private string _verificationText = "Verification has not run yet.";
 
     public PatchOption Patch { get; init; } = new();
 
@@ -231,6 +254,66 @@ public sealed class PatchRow : INotifyPropertyChanged
         }
     }
 
+    public string UpdateDetails
+    {
+        get => _updateDetails;
+        set
+        {
+            if (_updateDetails == value)
+            {
+                return;
+            }
+
+            _updateDetails = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string GuidanceText
+    {
+        get => _guidanceText;
+        set
+        {
+            if (_guidanceText == value)
+            {
+                return;
+            }
+
+            _guidanceText = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string ReleaseNotesText
+    {
+        get => _releaseNotesText;
+        set
+        {
+            if (_releaseNotesText == value)
+            {
+                return;
+            }
+
+            _releaseNotesText = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string VerificationText
+    {
+        get => _verificationText;
+        set
+        {
+            if (_verificationText == value)
+            {
+                return;
+            }
+
+            _verificationText = value;
+            OnPropertyChanged();
+        }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
@@ -251,6 +334,14 @@ public sealed class UpdateSummaryItem
     public string VersionChange { get; init; } = "";
     public string StatusText { get; init; } = "";
     public string DownloadUrl { get; init; } = "";
+}
+
+public sealed class HistoryListItem
+{
+    public string TimestampText { get; init; } = "";
+    public string Title { get; init; } = "";
+    public string StatusText { get; init; } = "";
+    public string FolderPath { get; init; } = "";
 }
 
 public sealed class MainViewState : INotifyPropertyChanged
@@ -274,12 +365,23 @@ public sealed class MainViewState : INotifyPropertyChanged
     private string _updateSummaryHeaderText = "Everything you have tracked locally is up to date with the current Project Reforged catalog.";
     private bool _canOpenInstalledFile;
     private string _selectedPatchPath = "";
+    private string _appVersionText = "App v2.3";
+    private string _appUpdateBannerText = "";
+    private bool _isAppUpdateBannerVisible;
+    private bool _canUpdateInstalled;
+    private string _selectedPatchGuidanceText = "Select a patch to see install guidance and dependency notes.";
+    private bool _isFirstRunHelpVisible;
+    private string _firstRunHelpText = "Choose a patch folder, refresh the live catalog, and use Select Recommended for a strong starting point.";
+    private bool _canRepairSelection;
+    private string _selectedPatchReleaseNotesText = "Patch notes open on the live Project Reforged downloads page.";
+    private string _historyHeaderText = "Recent downloads and repair actions appear here.";
 
     public ObservableCollection<PatchRow> VisibleRows { get; } = [];
     public ObservableCollection<ActivityLogEntry> Activity { get; } = [];
     public ObservableCollection<UpdateSummaryItem> UpdateItems { get; } = [];
+    public ObservableCollection<HistoryListItem> History { get; } = [];
     public ObservableCollection<string> Categories { get; } = ["All", "Core", "Optional", "Audio", "Ultra"];
-    public ObservableCollection<string> Statuses { get; } = ["All", "Update available", "Up to date", "Downloaded", "Not downloaded", "Other variant installed"];
+    public ObservableCollection<string> Statuses { get; } = ["All", "Needs repair", "Update available", "Up to date", "Downloaded", "Not downloaded", "Other variant installed"];
 
     public string StatusText
     {
@@ -393,6 +495,66 @@ public sealed class MainViewState : INotifyPropertyChanged
     {
         get => _selectedPatchPath;
         set => SetField(ref _selectedPatchPath, value);
+    }
+
+    public string AppVersionText
+    {
+        get => _appVersionText;
+        set => SetField(ref _appVersionText, value);
+    }
+
+    public string AppUpdateBannerText
+    {
+        get => _appUpdateBannerText;
+        set => SetField(ref _appUpdateBannerText, value);
+    }
+
+    public bool IsAppUpdateBannerVisible
+    {
+        get => _isAppUpdateBannerVisible;
+        set => SetField(ref _isAppUpdateBannerVisible, value);
+    }
+
+    public bool CanUpdateInstalled
+    {
+        get => _canUpdateInstalled;
+        set => SetField(ref _canUpdateInstalled, value);
+    }
+
+    public string SelectedPatchGuidanceText
+    {
+        get => _selectedPatchGuidanceText;
+        set => SetField(ref _selectedPatchGuidanceText, value);
+    }
+
+    public bool IsFirstRunHelpVisible
+    {
+        get => _isFirstRunHelpVisible;
+        set => SetField(ref _isFirstRunHelpVisible, value);
+    }
+
+    public string FirstRunHelpText
+    {
+        get => _firstRunHelpText;
+        set => SetField(ref _firstRunHelpText, value);
+    }
+
+    public bool CanRepairSelection
+    {
+        get => _canRepairSelection;
+        set => SetField(ref _canRepairSelection, value);
+    }
+
+    public string SelectedPatchReleaseNotesText
+    {
+        get => _selectedPatchReleaseNotesText;
+        set => SetField(ref _selectedPatchReleaseNotesText, value);
+    }
+
+    public string HistoryHeaderText
+    {
+        get => _historyHeaderText;
+        set => SetField(ref _historyHeaderText, value);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

@@ -17,6 +17,7 @@ public partial class MainWindow : Window
 {
     private readonly MainViewState _viewState = new();
     private readonly PatchDownloaderService _service = new();
+    private readonly AppUpdateService _appUpdateService = new();
     private readonly ObservableCollection<PatchRow> _allRows = [];
 
     private ProjectCatalog _catalog = new();
@@ -32,6 +33,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _viewState;
+        _viewState.AppVersionText = "App v" + GetCurrentAppVersion();
         _viewState.PropertyChanged += ViewState_PropertyChanged;
         Loaded += MainWindow_Loaded;
         Closing += MainWindow_Closing;
@@ -42,6 +44,7 @@ public partial class MainWindow : Window
         await LoadSettingsAsync();
         await ReloadManifestAsync();
         await RefreshCatalogAsync();
+        await CheckAppUpdatesAsync(false);
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e)
@@ -63,97 +66,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        try
-        {
-            _downloadCancellation = new CancellationTokenSource();
-            _viewState.IsDownloadInProgress = true;
-            SetStatus("Downloading");
-            _viewState.DownloadProgressMax = selected.Count;
-            _viewState.DownloadProgressValue = 0;
-            _viewState.DownloadProgressText = "Starting download queue...";
-            for (var index = 0; index < selected.Count; index++)
-            {
-                var row = selected[index];
-                var currentIndex = index + 1;
-                _downloadCancellation.Token.ThrowIfCancellationRequested();
-                var progress = new Progress<DownloadProgressInfo>(info =>
-                {
-                    var totalBytes = info.TotalBytes ?? row.Patch.RemoteSizeBytes;
-                    var fraction = totalBytes > 0 ? Math.Min(1d, (double)info.BytesReceived / totalBytes) : 0d;
-                    _viewState.DownloadProgressValue = (currentIndex - 1) + fraction;
-                    _viewState.DownloadProgressText = "Downloading " + currentIndex + " of " + selected.Count + ": "
-                        + row.Patch.Name + " [" + row.Patch.Variant + "] "
-                        + DisplayFormatting.FormatBytes(info.BytesReceived) + " / " + DisplayFormatting.FormatBytes(totalBytes);
-                });
-
-                _viewState.DownloadProgressText = "Downloading " + currentIndex + " of " + selected.Count + ": " + row.Patch.Name + " [" + row.Patch.Variant + "]";
-                AppendLog("Downloading " + row.Patch.Name + " [" + row.Patch.Variant + "].");
-                await _service.DownloadPatchAsync(row.Patch, _viewState.FolderPath, progress, _downloadCancellation.Token);
-
-                _metadataByUrl.TryGetValue(row.Patch.DownloadUrl, out var metadata);
-                metadata ??= new RemoteFileMetadata();
-
-                _manifestByUrl[row.Patch.DownloadUrl] = new PatchManifestEntry
-                {
-                    DownloadUrl = row.Patch.DownloadUrl,
-                    PatchId = row.Patch.PatchId,
-                    Variant = row.Patch.Variant,
-                    FileName = row.Patch.FileName,
-                    Version = row.Patch.LatestVersion,
-                    ReleaseDate = row.Patch.ReleaseDate,
-                    DownloadedUtc = DateTime.UtcNow.ToString("O"),
-                    ETag = metadata.ETag,
-                    LastModifiedUtc = metadata.LastModifiedUtc,
-                    ContentLength = metadata.ContentLength
-                };
-
-                _viewState.DownloadProgressValue = currentIndex;
-                _viewState.DownloadProgressText = "Finished " + currentIndex + " of " + selected.Count + ": " + row.Patch.Name;
-            }
-
-            await SaveManifestAsync();
-            AppendLog("Selected downloads completed.");
-            ApplyStatuses();
-        }
-        catch (OperationCanceledException)
-        {
-            AppendLog("Download queue was stopped by the user.");
-            _viewState.DownloadProgressText = "Downloads stopped.";
-            ApplyStatuses();
-        }
-        catch (Exception ex)
-        {
-            AppendLog("Download failed: " + ex.Message);
-            _viewState.DownloadProgressText = "Download failed.";
-            System.Windows.MessageBox.Show(this, ex.Message, "Download Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        finally
-        {
-            if (_viewState.DownloadProgressText == "Downloads complete."
-                || _viewState.DownloadProgressText == "Downloads stopped."
-                || _viewState.DownloadProgressText == "Download failed.")
-            {
-                _viewState.DownloadProgressValue = Math.Min(_viewState.DownloadProgressValue, _viewState.DownloadProgressMax);
-            }
-            else if (selected.Count > 0)
-            {
-                _viewState.DownloadProgressValue = _viewState.DownloadProgressMax;
-                _viewState.DownloadProgressText = "Downloads complete.";
-            }
-
-            _downloadCancellation?.Dispose();
-            _downloadCancellation = null;
-            _viewState.IsDownloadInProgress = false;
-            SetStatus("Ready");
-            _ = SaveSettingsAsync();
-
-            if (_closeAfterDownloadStop)
-            {
-                _closeAfterDownloadStop = false;
-                _allowImmediateClose = true;
-                _ = Dispatcher.BeginInvoke(new Action(Close));
-            }
-        }
+        await DownloadRowsAsync(selected, "Selected downloads completed.");
     }
 
     private void StopDownloads_Click(object sender, RoutedEventArgs e)
@@ -183,7 +96,10 @@ public partial class MainWindow : Window
     {
         foreach (var row in _allRows)
         {
-            row.IsSelected = row.Category == "Core" || row.Patch.PatchId is "B" or "D" or "E" or "I" or "M";
+            row.IsSelected =
+                row.Category == "Core"
+                || row.Patch.PatchId is "B" or "D" or "E" or "I" or "M" or "V"
+                || (row.Patch.PatchId == "U" && string.Equals(row.Patch.Variant, "Standard", StringComparison.OrdinalIgnoreCase));
         }
 
         foreach (var row in _allRows.Where(item => item.IsSelected).ToList())
@@ -234,14 +150,92 @@ public partial class MainWindow : Window
         }
     }
 
+    private void VerifyFiles_Click(object sender, RoutedEventArgs e)
+    {
+        VerifyLocalFiles(true);
+    }
+
     private void PatchNotes_Click(object sender, RoutedEventArgs e)
     {
-        OpenUrl("https://projectreforged.github.io/");
+        if (PatchGrid.SelectedItem is PatchRow row)
+        {
+            AppendLog("Opened release notes for " + row.Patch.Name + " [" + row.Patch.Variant + "].");
+        }
+
+        OpenUrl(GetSelectedPatchNotesUrl());
     }
 
     private void ProjectSite_Click(object sender, RoutedEventArgs e)
     {
         OpenUrl("https://projectreforged.github.io/downloads/");
+    }
+
+    private async void UpdateInstalled_Click(object sender, RoutedEventArgs e)
+    {
+        var updateRows = _allRows.Where(row => row.Status == "Update available").ToList();
+        if (updateRows.Count == 0)
+        {
+            System.Windows.MessageBox.Show(this, "No installed patches currently need updates.", "Everything Is Current", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        foreach (var row in _allRows)
+        {
+            row.IsSelected = false;
+        }
+
+        foreach (var row in updateRows)
+        {
+            row.IsSelected = true;
+            PromptForRequiredPatches(row, false);
+            EnforceSelectionRules(row);
+        }
+
+        RefreshVisibleRows();
+
+        var selected = _allRows.Where(row => row.IsSelected).ToList();
+        if (!ConfirmDownloadFolder(selected))
+        {
+            return;
+        }
+
+        await DownloadRowsAsync(selected, "Installed patches were updated.");
+    }
+
+    private async void CheckAppUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        await CheckAppUpdatesAsync(true);
+    }
+
+    private async void RepairSelected_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = _allRows.Where(row => row.IsSelected).ToList();
+        if (selected.Count == 0 && PatchGrid.SelectedItem is PatchRow activeRow)
+        {
+            activeRow.IsSelected = true;
+            selected.Add(activeRow);
+        }
+
+        if (selected.Count == 0)
+        {
+            System.Windows.MessageBox.Show(this, "Select one or more patches to repair first.", "Nothing Selected", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (!ConfirmDownloadFolder(selected))
+        {
+            return;
+        }
+
+        AppendLog("Repairing " + selected.Count + " selected patch(es).");
+        await DownloadRowsAsync(selected, "Selected patches were repaired.");
+    }
+
+    private async void DismissFirstRunHelp_Click(object sender, RoutedEventArgs e)
+    {
+        _viewState.IsFirstRunHelpVisible = false;
+        _settings.HasDismissedFirstRunHelp = true;
+        await SaveSettingsAsync();
     }
 
     private void PatchGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -379,6 +373,61 @@ public partial class MainWindow : Window
         await _service.SaveManifestAsync(_viewState.FolderPath, manifest, CancellationToken.None);
     }
 
+    private void RefreshHistory()
+    {
+        _viewState.History.Clear();
+        foreach (var entry in _settings.DownloadHistory
+                     .OrderByDescending(item => item.TimestampUtc)
+                     .Take(30))
+        {
+            var title = entry.PatchName;
+            if (!string.IsNullOrWhiteSpace(entry.Variant))
+            {
+                title += " [" + entry.Variant + "]";
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.Version))
+            {
+                title += " " + entry.Version;
+            }
+
+            _viewState.History.Add(new HistoryListItem
+            {
+                TimestampText = DisplayFormatting.FormatLastChecked(entry.TimestampUtc),
+                Title = title,
+                StatusText = entry.Result,
+                FolderPath = entry.FolderPath
+            });
+        }
+
+        _viewState.HistoryHeaderText = _viewState.History.Count == 0
+            ? "Recent downloads and repair actions appear here."
+            : _viewState.History.Count == 1
+                ? "1 recent download or repair is saved in history."
+                : _viewState.History.Count + " recent downloads or repairs are saved in history.";
+    }
+
+    private void AddHistoryEntry(PatchRow row, string result)
+    {
+        _settings.DownloadHistory.Insert(0, new DownloadHistoryEntry
+        {
+            TimestampUtc = DateTime.UtcNow.ToString("O"),
+            PatchName = row.Patch.Name,
+            Variant = row.Patch.Variant,
+            Version = row.Patch.LatestVersion,
+            Result = result,
+            FolderPath = _viewState.FolderPath,
+            DownloadUrl = row.Patch.DownloadUrl
+        });
+
+        while (_settings.DownloadHistory.Count > 120)
+        {
+            _settings.DownloadHistory.RemoveAt(_settings.DownloadHistory.Count - 1);
+        }
+
+        RefreshHistory();
+    }
+
     private void BuildRowsFromCatalog()
     {
         foreach (var row in _allRows)
@@ -397,6 +446,7 @@ public partial class MainWindow : Window
             row.RemoteSizeText = DisplayFormatting.FormatBytes(patch.RemoteSizeBytes > 0 ? patch.RemoteSizeBytes : null);
             row.RecommendationText = BuildRecommendationText(patch);
             row.RecommendationBrush = DisplayFormatting.RecommendationBrushFor(row.RecommendationText);
+            row.GuidanceText = BuildGuidanceText(patch);
             row.PropertyChanged += Row_PropertyChanged;
             _allRows.Add(row);
         }
@@ -476,6 +526,19 @@ public partial class MainWindow : Window
 
         if (!exists)
         {
+            if (manifestEntry is not null)
+            {
+                row.Status = "Needs repair";
+                row.StatusBrush = new SolidColorBrush(Color.FromRgb(253, 228, 228));
+                row.InstalledVersion = string.IsNullOrWhiteSpace(manifestEntry.Version) ? "-" : manifestEntry.Version;
+                row.DownloadedUtc = string.IsNullOrWhiteSpace(manifestEntry.DownloadedUtc) ? "-" : manifestEntry.DownloadedUtc;
+                row.LocalSizeText = "-";
+                row.UpdateDetails = "Tracked patch file is missing from the selected folder and should be repaired.";
+                row.VerificationText = "Tracked file missing locally.";
+                row.ReleaseNotesText = BuildReleaseNotesText(row.Patch);
+                return;
+            }
+
             if (HasSiblingVariantInstalled(row.Patch))
             {
                 row.Status = "Other variant installed";
@@ -490,22 +553,40 @@ public partial class MainWindow : Window
             row.InstalledVersion = "-";
             row.DownloadedUtc = "-";
             row.LocalSizeText = "-";
+            row.UpdateDetails = "Patch is not installed locally yet.";
+            row.VerificationText = "No local file found.";
+            row.ReleaseNotesText = BuildReleaseNotesText(row.Patch);
             return;
         }
+
+        var localLength = new FileInfo(filePath).Length;
 
         if (manifestEntry is null)
         {
             row.Status = "Downloaded";
             row.InstalledVersion = "-";
             row.DownloadedUtc = "-";
-            row.LocalSizeText = DisplayFormatting.FormatBytes(new FileInfo(filePath).Length);
+            row.LocalSizeText = DisplayFormatting.FormatBytes(localLength);
             row.StatusBrush = new SolidColorBrush(Color.FromRgb(235, 238, 243));
+            row.UpdateDetails = "Patch exists locally but no v2 tracking manifest entry was found for update comparison.";
+            row.VerificationText = "Local file exists, but no tracking manifest entry was found.";
+            row.ReleaseNotesText = BuildReleaseNotesText(row.Patch);
             return;
         }
 
         row.InstalledVersion = string.IsNullOrWhiteSpace(manifestEntry.Version) ? "-" : manifestEntry.Version;
         row.DownloadedUtc = string.IsNullOrWhiteSpace(manifestEntry.DownloadedUtc) ? "-" : manifestEntry.DownloadedUtc;
-        row.LocalSizeText = DisplayFormatting.FormatBytes(new FileInfo(filePath).Length);
+        row.LocalSizeText = DisplayFormatting.FormatBytes(localLength);
+        row.UpdateDetails = BuildUpdateDetails(row.Patch, manifestEntry);
+        row.VerificationText = BuildVerificationText(row.Patch, manifestEntry, localLength);
+        row.ReleaseNotesText = BuildReleaseNotesText(row.Patch);
+
+        if (NeedsRepair(row.Patch, manifestEntry, localLength))
+        {
+            row.Status = "Needs repair";
+            row.StatusBrush = new SolidColorBrush(Color.FromRgb(253, 228, 228));
+            return;
+        }
 
         if (HasUpdate(row.Patch, manifestEntry))
         {
@@ -518,31 +599,26 @@ public partial class MainWindow : Window
         row.StatusBrush = new SolidColorBrush(Color.FromRgb(226, 244, 233));
     }
 
+    private bool NeedsRepair(PatchOption patch, PatchManifestEntry manifestEntry, long localLength)
+    {
+        if (manifestEntry.ContentLength > 0 && localLength != manifestEntry.ContentLength)
+        {
+            return true;
+        }
+
+        if (_metadataByUrl.TryGetValue(patch.DownloadUrl, out var metadata)
+            && metadata.ContentLength > 0
+            && localLength != metadata.ContentLength)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     private bool HasUpdate(PatchOption patch, PatchManifestEntry manifestEntry)
     {
-        if (!string.IsNullOrWhiteSpace(patch.LatestVersion)
-            && !string.Equals(patch.LatestVersion, "Unlisted", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(patch.LatestVersion, manifestEntry.Version, StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        if (!_metadataByUrl.TryGetValue(patch.DownloadUrl, out var metadata))
-        {
-            return false;
-        }
-
-        if (!string.IsNullOrWhiteSpace(metadata.ETag) && !string.Equals(metadata.ETag, manifestEntry.ETag, StringComparison.Ordinal))
-        {
-            return true;
-        }
-
-        if (!string.IsNullOrWhiteSpace(metadata.LastModifiedUtc) && !string.Equals(metadata.LastModifiedUtc, manifestEntry.LastModifiedUtc, StringComparison.Ordinal))
-        {
-            return true;
-        }
-
-        return metadata.ContentLength > 0 && metadata.ContentLength != manifestEntry.ContentLength;
+        return GetUpdateReasons(patch, manifestEntry).Count > 0;
     }
 
     private bool HasSiblingVariantInstalled(PatchOption patch)
@@ -610,6 +686,9 @@ public partial class MainWindow : Window
         builder.AppendLine("Suggested setup: " + row.RecommendationText);
         builder.AppendLine("Rules: " + row.Patch.Requirements);
         builder.AppendLine();
+        builder.AppendLine("INSTALL GUIDANCE");
+        builder.AppendLine(row.GuidanceText);
+        builder.AppendLine();
         builder.AppendLine("VERSIONS");
         builder.AppendLine("Latest site version: " + row.Patch.LatestVersion);
         builder.AppendLine("Installed version: " + row.InstalledVersion);
@@ -617,12 +696,21 @@ public partial class MainWindow : Window
         builder.AppendLine("Downloaded on: " + row.DownloadedUtc);
         builder.AppendLine("Live update flag: " + (row.Patch.SiteUpdated ? "Yes" : "No"));
         builder.AppendLine();
+        builder.AppendLine("UPDATE CHECK");
+        builder.AppendLine(row.UpdateDetails);
+        builder.AppendLine();
+        builder.AppendLine("VERIFICATION");
+        builder.AppendLine(row.VerificationText);
+        builder.AppendLine();
         builder.AppendLine("FILE SIZES");
         builder.AppendLine("Remote: " + row.RemoteSizeText);
         builder.AppendLine("Local: " + row.LocalSizeText);
         builder.AppendLine();
         builder.AppendLine("SUMMARY");
         builder.AppendLine(row.Patch.Summary);
+        builder.AppendLine();
+        builder.AppendLine("PATCH NOTES");
+        builder.AppendLine(row.ReleaseNotesText);
         builder.AppendLine();
         builder.AppendLine("SOURCE");
         builder.AppendLine(row.Patch.DownloadUrl);
@@ -635,15 +723,22 @@ public partial class MainWindow : Window
     private void ApplySelectedPatch(PatchRow row)
     {
         _viewState.DetailsText = BuildDetailsText(row);
+        _viewState.SelectedPatchGuidanceText = row.GuidanceText;
+        _viewState.SelectedPatchReleaseNotesText = row.ReleaseNotesText;
         var filePath = GetPatchFilePath(row);
         _viewState.SelectedPatchPath = filePath;
         _viewState.CanOpenInstalledFile = File.Exists(filePath);
+        _viewState.CanRepairSelection = row.Status is "Needs repair" or "Downloaded" or "Update available";
     }
 
     private void UpdateCounts()
     {
         _viewState.SelectedCount = _allRows.Count(row => row.IsSelected).ToString();
         var updates = _allRows.Count(row => row.Status == "Update available");
+        _viewState.CanUpdateInstalled = updates > 0 && !_viewState.IsDownloadInProgress;
+        _viewState.CanRepairSelection = !_viewState.IsDownloadInProgress
+            && (_allRows.Any(row => row.IsSelected && row.Status is "Needs repair" or "Downloaded" or "Update available")
+                || PatchGrid.SelectedItem is PatchRow selectedRow && selectedRow.Status is "Needs repair" or "Downloaded" or "Update available");
         _viewState.UpdateAlertText = updates == 0
             ? "No downloaded patches need updates"
             : updates + " downloaded patch(es) have live updates";
@@ -668,7 +763,7 @@ public partial class MainWindow : Window
                 VersionChange = (string.IsNullOrWhiteSpace(row.InstalledVersion) || row.InstalledVersion == "-" ? "Installed version unknown" : row.InstalledVersion)
                     + " -> "
                     + row.Patch.LatestVersion,
-                StatusText = "Click to jump to this patch in the catalog.",
+                StatusText = row.UpdateDetails,
                 DownloadUrl = row.Patch.DownloadUrl
             });
         }
@@ -703,6 +798,14 @@ public partial class MainWindow : Window
         _settings = await SettingsStore.LoadAsync(CancellationToken.None);
         _viewState.FolderPath = string.IsNullOrWhiteSpace(_settings.FolderPath) ? _viewState.FolderPath : _settings.FolderPath;
         _viewState.LastCheckedText = DisplayFormatting.FormatLastChecked(_settings.LastCheckedUtc);
+        _viewState.IsFirstRunHelpVisible = !_settings.HasDismissedFirstRunHelp;
+        _viewState.FirstRunHelpText =
+            "1. Choose your patch folder." + Environment.NewLine
+            + "2. Use Check for Updates to refresh the live Project Reforged catalog." + Environment.NewLine
+            + "3. Use Select Recommended for a quick baseline." + Environment.NewLine
+            + "4. Use Update Installed whenever tracked patches show live updates." + Environment.NewLine
+            + "5. Use Verify Files if you want a quick local integrity pass before downloading.";
+        RefreshHistory();
         ApplyColumnWidths();
     }
 
@@ -786,6 +889,106 @@ public partial class MainWindow : Window
         return "-";
     }
 
+    private static string BuildGuidanceText(PatchOption patch)
+    {
+        var lines = new List<string>();
+
+        if (patch.LinkedPatchIds.Count > 0)
+        {
+            lines.Add("Linked install: PATCH-" + patch.PatchId + " is designed to travel with " + string.Join(", ", patch.LinkedPatchIds.Select(id => "PATCH-" + id)) + ".");
+        }
+
+        if (patch.RequiredPatchIds.Count > 0)
+        {
+            lines.Add("Recommended dependencies: " + string.Join(", ", patch.RequiredPatchIds.Select(id => "PATCH-" + id)) + ".");
+        }
+
+        if (patch.PatchId is "L" or "U")
+        {
+            lines.Add("Variant rule: only one " + patch.Name + " option should stay active at a time.");
+        }
+
+        if (lines.Count == 0)
+        {
+            lines.Add("No extra install guidance was published on the downloads page.");
+        }
+
+        return string.Join(" ", lines);
+    }
+
+    private static string BuildReleaseNotesText(PatchOption patch)
+    {
+        return patch.SiteUpdated
+            ? patch.Name + " is listed in the current live Project Reforged update set. Open Patch Notes for the live downloads page."
+            : "Open Patch Notes for the live Project Reforged downloads page.";
+    }
+
+    private string BuildVerificationText(PatchOption patch, PatchManifestEntry manifestEntry, long localLength)
+    {
+        var checks = new List<string>();
+
+        if (manifestEntry.ContentLength > 0)
+        {
+            checks.Add(localLength == manifestEntry.ContentLength
+                ? "Local size matches tracked manifest size."
+                : "Local size differs from the tracked manifest size.");
+        }
+
+        if (_metadataByUrl.TryGetValue(patch.DownloadUrl, out var metadata) && metadata.ContentLength > 0)
+        {
+            checks.Add(localLength == metadata.ContentLength
+                ? "Local size matches current live file size."
+                : "Local size differs from the current live file size.");
+        }
+
+        if (checks.Count == 0)
+        {
+            checks.Add("Verification is limited because no size metadata is available yet.");
+        }
+
+        return string.Join(" ", checks);
+    }
+
+    private List<string> GetUpdateReasons(PatchOption patch, PatchManifestEntry manifestEntry)
+    {
+        var reasons = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(patch.LatestVersion)
+            && !string.Equals(patch.LatestVersion, "Unlisted", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(patch.LatestVersion, manifestEntry.Version, StringComparison.OrdinalIgnoreCase))
+        {
+            reasons.Add("Version changed from " + (string.IsNullOrWhiteSpace(manifestEntry.Version) ? "unknown" : manifestEntry.Version) + " to " + patch.LatestVersion + ".");
+        }
+
+        if (_metadataByUrl.TryGetValue(patch.DownloadUrl, out var metadata))
+        {
+            if (!string.IsNullOrWhiteSpace(metadata.ETag) && !string.Equals(metadata.ETag, manifestEntry.ETag, StringComparison.Ordinal))
+            {
+                reasons.Add("Server ETag changed.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(metadata.LastModifiedUtc) && !string.Equals(metadata.LastModifiedUtc, manifestEntry.LastModifiedUtc, StringComparison.Ordinal))
+            {
+                reasons.Add("Remote modified timestamp changed.");
+            }
+
+            if (metadata.ContentLength > 0 && metadata.ContentLength != manifestEntry.ContentLength)
+            {
+                reasons.Add("Remote file size changed from " + DisplayFormatting.FormatBytes(manifestEntry.ContentLength) + " to " + DisplayFormatting.FormatBytes(metadata.ContentLength) + ".");
+            }
+        }
+
+        return reasons;
+    }
+
+    private string BuildUpdateDetails(PatchOption patch, PatchManifestEntry manifestEntry)
+    {
+        var reasons = GetUpdateReasons(patch, manifestEntry);
+        return reasons.Count == 0
+            ? "Tracked file matches the current live metadata."
+            : string.Join(" ", reasons);
+    }
+
     private void PromptForRequiredPatches(PatchRow row, bool askUser)
     {
         if (row.Patch.RequiredPatchIds.Count == 0)
@@ -850,6 +1053,31 @@ public partial class MainWindow : Window
         return result == MessageBoxResult.Yes;
     }
 
+    private void VerifyLocalFiles(bool showSummary)
+    {
+        ApplyStatuses();
+
+        var needsRepair = _allRows.Count(row => row.Status == "Needs repair");
+        var upToDate = _allRows.Count(row => row.Status == "Up to date");
+        var downloaded = _allRows.Count(row => row.Status == "Downloaded");
+
+        var summary = "Verification finished. "
+            + needsRepair + " need repair, "
+            + upToDate + " are up to date, and "
+            + downloaded + " local file(s) are untracked.";
+
+        AppendLog(summary);
+        if (showSummary)
+        {
+            System.Windows.MessageBox.Show(this, summary, "Verify Files", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private string GetSelectedPatchNotesUrl()
+    {
+        return "https://projectreforged.github.io/downloads/";
+    }
+
     private static void OpenUrl(string url)
     {
         Process.Start(new ProcessStartInfo
@@ -857,5 +1085,189 @@ public partial class MainWindow : Window
             FileName = url,
             UseShellExecute = true
         });
+    }
+
+    private async Task DownloadRowsAsync(IReadOnlyList<PatchRow> selected, string completionLogMessage)
+    {
+        try
+        {
+            _downloadCancellation = new CancellationTokenSource();
+            _viewState.IsDownloadInProgress = true;
+            SetStatus("Downloading");
+            _viewState.DownloadProgressMax = selected.Count;
+            _viewState.DownloadProgressValue = 0;
+            _viewState.DownloadProgressText = "Starting download queue...";
+            UpdateCounts();
+
+            for (var index = 0; index < selected.Count; index++)
+            {
+                var row = selected[index];
+                var currentIndex = index + 1;
+                _downloadCancellation.Token.ThrowIfCancellationRequested();
+                var progress = new Progress<DownloadProgressInfo>(info =>
+                {
+                    var totalBytes = info.TotalBytes ?? row.Patch.RemoteSizeBytes;
+                    var fraction = totalBytes > 0 ? Math.Min(1d, (double)info.BytesReceived / totalBytes) : 0d;
+                    _viewState.DownloadProgressValue = (currentIndex - 1) + fraction;
+                    _viewState.DownloadProgressText = "Downloading " + currentIndex + " of " + selected.Count + ": "
+                        + row.Patch.Name + " [" + row.Patch.Variant + "] "
+                        + DisplayFormatting.FormatBytes(info.BytesReceived) + " / " + DisplayFormatting.FormatBytes(totalBytes);
+                });
+
+                _viewState.DownloadProgressText = "Downloading " + currentIndex + " of " + selected.Count + ": " + row.Patch.Name + " [" + row.Patch.Variant + "]";
+                AppendLog("Downloading " + row.Patch.Name + " [" + row.Patch.Variant + "].");
+                await _service.DownloadPatchAsync(row.Patch, _viewState.FolderPath, progress, _downloadCancellation.Token);
+
+                _metadataByUrl.TryGetValue(row.Patch.DownloadUrl, out var metadata);
+                metadata ??= new RemoteFileMetadata();
+
+                _manifestByUrl[row.Patch.DownloadUrl] = new PatchManifestEntry
+                {
+                    DownloadUrl = row.Patch.DownloadUrl,
+                    PatchId = row.Patch.PatchId,
+                    Variant = row.Patch.Variant,
+                    FileName = row.Patch.FileName,
+                    Version = row.Patch.LatestVersion,
+                    ReleaseDate = row.Patch.ReleaseDate,
+                    DownloadedUtc = DateTime.UtcNow.ToString("O"),
+                    ETag = metadata.ETag,
+                    LastModifiedUtc = metadata.LastModifiedUtc,
+                    ContentLength = metadata.ContentLength
+                };
+
+                AddHistoryEntry(row, "Downloaded to " + _viewState.FolderPath);
+
+                _viewState.DownloadProgressValue = currentIndex;
+                _viewState.DownloadProgressText = "Finished " + currentIndex + " of " + selected.Count + ": " + row.Patch.Name;
+            }
+
+            await SaveManifestAsync();
+            AppendLog(completionLogMessage);
+            ApplyStatuses();
+        }
+        catch (OperationCanceledException)
+        {
+            AppendLog("Download queue was stopped by the user.");
+            _viewState.DownloadProgressText = "Downloads stopped.";
+            ApplyStatuses();
+        }
+        catch (Exception ex)
+        {
+            AppendLog("Download failed: " + ex.Message);
+            _viewState.DownloadProgressText = "Download failed.";
+            System.Windows.MessageBox.Show(this, ex.Message, "Download Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            if (_viewState.DownloadProgressText == "Downloads complete."
+                || _viewState.DownloadProgressText == "Downloads stopped."
+                || _viewState.DownloadProgressText == "Download failed.")
+            {
+                _viewState.DownloadProgressValue = Math.Min(_viewState.DownloadProgressValue, _viewState.DownloadProgressMax);
+            }
+            else if (selected.Count > 0)
+            {
+                _viewState.DownloadProgressValue = _viewState.DownloadProgressMax;
+                _viewState.DownloadProgressText = "Downloads complete.";
+            }
+
+            _downloadCancellation?.Dispose();
+            _downloadCancellation = null;
+            _viewState.IsDownloadInProgress = false;
+            SetStatus("Ready");
+            UpdateCounts();
+            _ = SaveSettingsAsync();
+
+            if (_closeAfterDownloadStop)
+            {
+                _closeAfterDownloadStop = false;
+                _allowImmediateClose = true;
+                _ = Dispatcher.BeginInvoke(new Action(Close));
+            }
+        }
+    }
+
+    private async Task CheckAppUpdatesAsync(bool userInitiated)
+    {
+        try
+        {
+            var currentVersion = GetCurrentAppVersion();
+
+            if (string.IsNullOrWhiteSpace(_settings.AppReleaseApiUrl))
+            {
+                _viewState.IsAppUpdateBannerVisible = false;
+                if (userInitiated)
+                {
+                    System.Windows.MessageBox.Show(
+                        this,
+                        "App update checks are ready, but no GitHub release API URL is configured yet." + Environment.NewLine + Environment.NewLine
+                        + "Add AppReleaseApiUrl and AppReleasePageUrl to:" + Environment.NewLine
+                        + SettingsStore.GetSettingsPath(),
+                        "App Updates Not Configured",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+
+                return;
+            }
+
+            var latest = await _appUpdateService.LoadLatestReleaseAsync(_settings.AppReleaseApiUrl, _settings.AppReleasePageUrl, CancellationToken.None);
+            _settings.LastAppUpdateCheckedUtc = DateTime.UtcNow.ToString("O");
+            await SaveSettingsAsync();
+
+            if (latest is null || string.IsNullOrWhiteSpace(latest.Version))
+            {
+                if (userInitiated)
+                {
+                    System.Windows.MessageBox.Show(this, "The latest app release could not be read from GitHub.", "App Update Check", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+
+                return;
+            }
+
+            if (AppUpdateService.IsNewerVersion(currentVersion, latest.Version)
+                && !string.Equals(_settings.DismissedAppVersion, latest.Version, StringComparison.OrdinalIgnoreCase))
+            {
+                _viewState.AppUpdateBannerText = "A newer app version is available: v" + latest.Version + ". Use Check App Updates to open the latest release.";
+                _viewState.IsAppUpdateBannerVisible = true;
+                AppendLog("App update available: v" + latest.Version + ".");
+
+                if (userInitiated && !string.IsNullOrWhiteSpace(latest.ReleasePageUrl))
+                {
+                    var result = System.Windows.MessageBox.Show(
+                        this,
+                        "A newer app version is available: v" + latest.Version + "." + Environment.NewLine + Environment.NewLine + "Open the release page now?",
+                        "App Update Available",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Information);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        OpenUrl(latest.ReleasePageUrl);
+                    }
+                }
+
+                return;
+            }
+
+            _viewState.IsAppUpdateBannerVisible = false;
+            if (userInitiated)
+            {
+                System.Windows.MessageBox.Show(this, "This app is already on the latest known version.", "App Update Check", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendLog("App update check failed: " + ex.Message);
+            if (userInitiated)
+            {
+                System.Windows.MessageBox.Show(this, ex.Message, "App Update Check Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    private static string GetCurrentAppVersion()
+    {
+        return AppUpdateService.NormalizeVersion(typeof(MainWindow).Assembly.GetName().Version?.ToString() ?? "2.3.0");
     }
 }

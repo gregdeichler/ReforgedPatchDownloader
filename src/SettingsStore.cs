@@ -5,10 +5,19 @@ namespace ReforgedPatchDownloaderApp;
 
 public sealed class AppSettings
 {
+    private const string DefaultAppReleasePageUrl = "https://github.com/gregdeichler/ReforgedPatchDownloader/releases/latest";
+    private const string DefaultAppReleaseApiUrl = "https://api.github.com/repos/gregdeichler/ReforgedPatchDownloader/releases/latest";
+
     public string FolderPath { get; set; } = @"C:\Games\Patches";
     public string LastCheckedUtc { get; set; } = "";
     public Dictionary<string, double> ColumnWidths { get; set; } = [];
     public List<string> SelectedPatchUrls { get; set; } = [];
+    public bool HasDismissedFirstRunHelp { get; set; }
+    public string DismissedAppVersion { get; set; } = "";
+    public string AppReleaseApiUrl { get; set; } = DefaultAppReleaseApiUrl;
+    public string AppReleasePageUrl { get; set; } = DefaultAppReleasePageUrl;
+    public string LastAppUpdateCheckedUtc { get; set; } = "";
+    public List<DownloadHistoryEntry> DownloadHistory { get; set; } = [];
 }
 
 public static class SettingsStore

@@ -4,17 +4,23 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Project Reforged Patch Downloader 2.1"
-        Height="900"
-        Width="1440"
-        MinHeight="840"
-        MinWidth="1280"
+        Title="Project Reforged Patch Downloader 2.3"
+        Height="960"
+        Width="1500"
+        MinHeight="960"
+        MinWidth="1500"
+        ResizeMode="NoResize"
         Background="#F5F7FA">
     <Window.Resources>
         <SolidColorBrush x:Key="PanelBorderBrush" Color="#D7E0EA" />
         <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#FBFCFE" />
         <SolidColorBrush x:Key="HeaderBackgroundBrush" Color="#15314E" />
         <SolidColorBrush x:Key="HeaderAccentBrush" Color="#C89B3C" />
+        <LinearGradientBrush x:Key="HeaderGradientBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#11263C" Offset="0" />
+            <GradientStop Color="#1B3B5B" Offset="0.58" />
+            <GradientStop Color="#234A6A" Offset="1" />
+        </LinearGradientBrush>
         <Style TargetType="Button" x:Key="SecondaryButtonStyle">
             <Setter Property="Height" Value="36" />
             <Setter Property="Padding" Value="10,0" />
@@ -27,6 +33,7 @@
         </Style>
         <Style TargetType="Button" x:Key="PrimaryButtonStyle" BasedOn="{StaticResource SecondaryButtonStyle}">
             <Setter Property="Height" Value="38" />
+            <Setter Property="Margin" Value="0,0,6,0" />
             <Setter Property="Background" Value="#1E884E" />
             <Setter Property="BorderBrush" Value="#1E884E" />
             <Setter Property="Foreground" Value="White" />
@@ -70,7 +77,7 @@
             <Setter Property="BorderBrush" Value="#D7E0EA" />
         </Style>
     </Window.Resources>
-    <Grid Margin="18">
+    <Grid Margin="14">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -78,36 +85,78 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="{StaticResource HeaderBackgroundBrush}" CornerRadius="20" Padding="22" Margin="0,0,0,14">
+        <Border Grid.Row="0" Background="{StaticResource HeaderGradientBrush}" CornerRadius="20" Padding="0" Margin="0,0,0,10">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="220" />
-                </Grid.ColumnDefinitions>
-                <StackPanel>
-                    <TextBlock Text="Project Reforged Patch Downloader 2.1"
-                               Foreground="White"
-                               FontSize="28"
-                               FontWeight="Bold" />
-                    <TextBlock Text="Forge a cleaner Azeroth with a refined HD visual overhaul."
-                               Foreground="#D8E7F2"
-                               FontSize="14"
-                               TextWrapping="Wrap"
-                               MaxWidth="900"
-                               Margin="0,8,0,0" />
-                </StackPanel>
-                <Border Grid.Column="1"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Background="{StaticResource HeaderAccentBrush}"
-                        Padding="16,10"
-                        CornerRadius="16">
-                    <TextBlock Text="{Binding StatusText}" Foreground="#1B2636" FontWeight="SemiBold" FontSize="14" />
-                </Border>
+                <Grid Margin="22,20,22,18">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.55*" />
+                        <ColumnDefinition Width="0.95*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid Margin="0,0,20,0" VerticalAlignment="Center">
+                        <TextBlock Foreground="White"
+                                   FontSize="28"
+                                   FontWeight="Bold"
+                                   Text="Project Reforged Patch Downloader"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                    <Border Grid.Column="1"
+                            Background="#142B44"
+                            BorderBrush="#33587C"
+                            BorderThickness="1"
+                            CornerRadius="18"
+                            Padding="18,14"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Center">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="SESSION STATUS"
+                                       Foreground="#AFC6DA"
+                                       FontSize="11"
+                                       FontWeight="SemiBold" />
+                            <Border Grid.Row="1"
+                                    Background="{StaticResource HeaderAccentBrush}"
+                                    CornerRadius="14"
+                                    Padding="12,7"
+                                    HorizontalAlignment="Left"
+                                    Margin="0,10,0,0">
+                                <TextBlock Text="{Binding StatusText}"
+                                           Foreground="#1B2636"
+                                           FontWeight="Bold"
+                                           FontSize="14" />
+                            </Border>
+                            <Border Grid.Row="2"
+                                    Background="#FFF3D6"
+                                    BorderBrush="#E7C47A"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Padding="10,8"
+                                    Margin="0,12,0,0">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsAppUpdateBannerVisible}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock Text="{Binding AppUpdateBannerText}"
+                                           Foreground="#5E430A"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap" />
+                            </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1" Margin="0,0,0,14">
+        <Grid Grid.Row="1" Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1*" />
                 <ColumnDefinition Width="1*" />
@@ -115,77 +164,77 @@
                 <ColumnDefinition Width="1*" />
                 <ColumnDefinition Width="1.25*" />
             </Grid.ColumnDefinitions>
-            <Border Style="{StaticResource MetricCardStyle}" Margin="0,0,10,0">
+            <Border Style="{StaticResource MetricCardStyle}" Margin="0,0,8,0" Padding="12">
                 <StackPanel>
                     <TextBlock Text="Current Stable" Foreground="#5E6C7C" />
-                    <TextBlock Text="{Binding StableVersion}" FontSize="24" FontWeight="Bold" Foreground="#17202D" Margin="0,8,0,0" />
+                    <TextBlock Text="{Binding StableVersion}" FontSize="22" FontWeight="Bold" Foreground="#17202D" Margin="0,6,0,0" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="1" Style="{StaticResource MetricCardStyle}" Margin="0,0,10,0">
+            <Border Grid.Column="1" Style="{StaticResource MetricCardStyle}" Margin="0,0,8,0" Padding="12">
                 <StackPanel>
                     <TextBlock Text="Site Update Date" Foreground="#5E6C7C" />
-                    <TextBlock Text="{Binding SiteUpdateDate}" FontSize="24" FontWeight="Bold" Foreground="#17202D" Margin="0,8,0,0" />
+                    <TextBlock Text="{Binding SiteUpdateDate}" FontSize="22" FontWeight="Bold" Foreground="#17202D" Margin="0,6,0,0" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="2" Style="{StaticResource MetricCardStyle}" Margin="0,0,10,0">
+            <Border Grid.Column="2" Style="{StaticResource MetricCardStyle}" Margin="0,0,8,0" Padding="12">
                 <StackPanel>
                     <TextBlock Text="Last Checked" Foreground="#5E6C7C" />
-                    <TextBlock Text="{Binding LastCheckedText}" FontSize="18" FontWeight="Bold" Foreground="#17202D" Margin="0,8,0,0" />
+                    <TextBlock Text="{Binding LastCheckedText}" FontSize="17" FontWeight="Bold" Foreground="#17202D" Margin="0,6,0,0" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="3" Style="{StaticResource MetricCardStyle}" Margin="0,0,10,0">
+            <Border Grid.Column="3" Style="{StaticResource MetricCardStyle}" Margin="0,0,8,0" Padding="12">
                 <StackPanel>
                     <TextBlock Text="Selected Downloads" Foreground="#5E6C7C" />
-                    <TextBlock Text="{Binding SelectedCount}" FontSize="24" FontWeight="Bold" Foreground="#17202D" Margin="0,8,0,0" />
+                    <TextBlock Text="{Binding SelectedCount}" FontSize="22" FontWeight="Bold" Foreground="#17202D" Margin="0,6,0,0" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="4" Style="{StaticResource MetricCardStyle}" Background="#FFF9F1" BorderBrush="#F0D8AE">
+            <Border Grid.Column="4" Style="{StaticResource MetricCardStyle}" Background="#FFF9F1" BorderBrush="#F0D8AE" Padding="12">
                 <StackPanel>
                     <TextBlock Text="Downloaded Patch Alerts" Foreground="#5E6C7C" />
-                    <TextBlock Text="{Binding UpdateAlertText}" TextWrapping="Wrap" FontSize="18" FontWeight="Bold" Foreground="#BF6100" Margin="0,8,0,0" />
+                    <TextBlock Text="{Binding UpdateAlertText}" TextWrapping="Wrap" FontSize="17" FontWeight="Bold" Foreground="#BF6100" Margin="0,6,0,0" />
                 </StackPanel>
             </Border>
         </Grid>
 
-        <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource PanelBorderBrush}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="0,0,0,14">
+        <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource PanelBorderBrush}" BorderThickness="1" CornerRadius="16" Padding="14" Margin="0,0,0,10">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <Grid Grid.Row="0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock Text="Patch Folder" Foreground="#5E6C7C" />
-                        <TextBox Margin="0,8,0,0" Height="34" Text="{Binding FolderPath, UpdateSourceTrigger=PropertyChanged}" />
-                    </StackPanel>
-                    <WrapPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="20,0,0,0">
-                        <Button Content="Browse" Width="88" Style="{StaticResource SecondaryButtonStyle}" Click="Browse_Click" />
-                        <Button Content="Check for Updates" Width="154" Style="{StaticResource SecondaryButtonStyle}" Click="Refresh_Click" />
-                        <Button Content="Patch Notes" Width="112" Style="{StaticResource SecondaryButtonStyle}" Click="PatchNotes_Click" />
-                        <Button Content="Project Site" Width="112" Style="{StaticResource SecondaryButtonStyle}" Click="ProjectSite_Click" />
-                        <Button Content="Select Recommended" Width="172" Style="{StaticResource SecondaryButtonStyle}" Click="SelectRecommended_Click" />
-                        <Button Content="Select Core" Width="94" Style="{StaticResource SecondaryButtonStyle}" Click="SelectCore_Click" />
-                        <Button Content="Reset Tracking" Width="118" Style="{StaticResource SecondaryButtonStyle}" Click="ResetTracking_Click" />
-                        <Button Content="Stop Downloads"
-                                Width="132"
-                                Style="{StaticResource StopButtonStyle}"
-                                FontWeight="SemiBold"
-                                Click="StopDownloads_Click">
-                        </Button>
-                        <Button Content="Download Selected"
-                                Width="170"
-                                Style="{StaticResource PrimaryButtonStyle}"
-                                Click="DownloadSelected_Click" />
-                    </WrapPanel>
-                </Grid>
-                <Border Grid.Row="1" Margin="0,12,0,0" Background="#F7FAFD" BorderBrush="#DCE5EF" BorderThickness="1" CornerRadius="12" Padding="12,10">
+                <StackPanel Grid.Row="0">
+                    <TextBlock Text="Patch Folder" Foreground="#5E6C7C" />
+                    <TextBox Margin="0,8,0,0"
+                             Height="34"
+                             Text="{Binding FolderPath, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                <WrapPanel Grid.Row="1" Margin="0,10,0,0">
+                    <Button Content="Browse" Width="84" Style="{StaticResource SecondaryButtonStyle}" Click="Browse_Click" />
+                    <Button Content="Check for Updates" Width="146" Style="{StaticResource SecondaryButtonStyle}" Click="Refresh_Click" />
+                    <Button Content="Update Installed" Width="130" Style="{StaticResource SecondaryButtonStyle}" Click="UpdateInstalled_Click" IsEnabled="{Binding CanUpdateInstalled}" />
+                    <Button Content="Select Recommended" Width="160" Style="{StaticResource SecondaryButtonStyle}" Click="SelectRecommended_Click" />
+                    <Button Content="Select Core" Width="88" Style="{StaticResource SecondaryButtonStyle}" Click="SelectCore_Click" />
+                    <Button Content="Reset Tracking" Width="110" Style="{StaticResource SecondaryButtonStyle}" Click="ResetTracking_Click" />
+                    <Button Content="Verify Files" Width="92" Style="{StaticResource SecondaryButtonStyle}" Click="VerifyFiles_Click" />
+                    <Button Content="Check App Updates" Width="136" Style="{StaticResource SecondaryButtonStyle}" Click="CheckAppUpdates_Click" />
+                    <Button Content="Patch Notes" Width="104" Style="{StaticResource SecondaryButtonStyle}" Click="PatchNotes_Click" />
+                    <Button Content="Project Site" Width="104" Style="{StaticResource SecondaryButtonStyle}" Click="ProjectSite_Click" />
+                    <Button Content="Stop Downloads"
+                            Width="124"
+                            Style="{StaticResource StopButtonStyle}"
+                            FontWeight="SemiBold"
+                            Click="StopDownloads_Click">
+                    </Button>
+                    <Button Content="Download Selected"
+                            Width="162"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Click="DownloadSelected_Click" />
+                </WrapPanel>
+                <Border Grid.Row="2" Margin="0,8,0,0" Background="#F7FAFD" BorderBrush="#DCE5EF" BorderThickness="1" CornerRadius="12" Padding="10,8">
                     <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="420" />
+                        <ColumnDefinition Width="400" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="{Binding DownloadProgressText}"
@@ -194,7 +243,7 @@
                                FontWeight="SemiBold"
                                Margin="0,0,14,0" />
                     <ProgressBar Grid.Column="1"
-                                 Height="14"
+                                 Height="12"
                                  VerticalAlignment="Center"
                                  Minimum="0"
                                  Maximum="{Binding DownloadProgressMax}"
@@ -206,18 +255,18 @@
 
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2.1*" />
+                <ColumnDefinition Width="2.45*" />
                 <ColumnDefinition Width="1*" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource PanelBorderBrush}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="0,0,14,0">
+            <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource PanelBorderBrush}" BorderThickness="1" CornerRadius="16" Padding="14" Margin="0,0,12,0">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <Grid Grid.Row="0" Margin="0,0,0,14">
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="1.3*" />
                             <ColumnDefinition Width="180" />
@@ -333,43 +382,89 @@
                     </DataGrid>
 
                     <TextBlock Grid.Row="2"
-                               Margin="0,14,0,0"
+                               Margin="0,10,0,0"
                                Foreground="#5E6C7C"
                                TextWrapping="Wrap"
                                Text="Orange rows have live updates compared with your tracked downloads. PATCH-B, PATCH-D, and PATCH-E auto-link. PATCH-L and PATCH-U force one active variant." />
                 </Grid>
             </Border>
 
-            <Border Grid.Column="1" Background="{StaticResource PanelBackgroundBrush}" BorderBrush="{StaticResource PanelBorderBrush}" BorderThickness="1" CornerRadius="16" Padding="16">
+            <Border Grid.Column="1" Background="{StaticResource PanelBackgroundBrush}" BorderBrush="{StaticResource PanelBorderBrush}" BorderThickness="1" CornerRadius="16" Padding="14">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="0.95*" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="0.7*" />
+                        <RowDefinition Height="0.98*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="0.44*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="0.46*" />
                     </Grid.RowDefinitions>
-                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Border Grid.Row="0"
+                            Background="#F6FAFF"
+                            BorderBrush="#DCE6F2"
+                            BorderThickness="1"
+                            CornerRadius="14"
+                            Padding="10"
+                            Margin="0,0,0,10">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFirstRunHelpVisible}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,12,0">
+                                <TextBlock Text="First Run Guide" FontSize="16" FontWeight="Bold" Foreground="#17314D" />
+                                <TextBlock Text="{Binding FirstRunHelpText}" TextWrapping="Wrap" Foreground="#44607F" Margin="0,6,0,0" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Content="Dismiss"
+                                    Width="88"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Click="DismissFirstRunHelp_Click" />
+                        </Grid>
+                    </Border>
+                    <Grid Grid.Row="1" Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Patch Details" FontSize="20" FontWeight="Bold" Foreground="#17202D" />
-                        <Button Grid.Column="1"
-                                Content="Open Installed File"
-                                Width="150"
-                                Style="{StaticResource SecondaryButtonStyle}"
-                                IsEnabled="{Binding CanOpenInstalledFile}"
-                                Click="OpenInstalledFile_Click" />
+                        <WrapPanel Grid.Column="1">
+                            <Button Content="Release Notes"
+                                    Width="108"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Click="PatchNotes_Click" />
+                            <Button Content="Repair Selected"
+                                    Width="116"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    IsEnabled="{Binding CanRepairSelection}"
+                                    Click="RepairSelected_Click" />
+                            <Button Content="Open File Location"
+                                    Width="150"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    IsEnabled="{Binding CanOpenInstalledFile}"
+                                    Click="OpenInstalledFile_Click" />
+                        </WrapPanel>
                     </Grid>
-                    <Border Grid.Row="1"
+                    <Border Grid.Row="2"
                             Background="White"
                             BorderBrush="#E1E8F0"
                             BorderThickness="1"
                             CornerRadius="14"
-                            Padding="14"
-                            Margin="0,0,0,14">
+                            Padding="12"
+                            Margin="0,0,0,10">
                         <TextBox
                              IsReadOnly="True"
                              BorderThickness="0"
@@ -378,17 +473,33 @@
                              Foreground="#22354A"
                              TextWrapping="Wrap"
                              AcceptsReturn="True"
-                             VerticalScrollBarVisibility="Auto"
+                             VerticalScrollBarVisibility="Visible"
                              Text="{Binding DetailsText}" />
                     </Border>
-                    <TextBlock Grid.Row="2" Text="What Changed" FontSize="20" FontWeight="Bold" Foreground="#17202D" />
-                    <Border Grid.Row="3"
+                    <TextBlock Grid.Row="3"
+                               Text="Install Guidance"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               Foreground="#17202D" />
+                    <Border Grid.Row="4"
+                            Background="#F8FBFE"
+                            BorderBrush="#E1E8F0"
+                            BorderThickness="1"
+                            CornerRadius="14"
+                            Padding="10"
+                            Margin="0,10,0,10">
+                        <TextBlock Text="{Binding SelectedPatchGuidanceText}"
+                                   Foreground="#35506B"
+                                   TextWrapping="Wrap" />
+                    </Border>
+                    <TextBlock Grid.Row="5" Text="What Changed" FontSize="20" FontWeight="Bold" Foreground="#17202D" />
+                    <Border Grid.Row="6"
                             Background="White"
                             BorderBrush="#E1E8F0"
                             BorderThickness="1"
                             CornerRadius="14"
                             Padding="10"
-                            Margin="0,12,0,14">
+                            Margin="0,10,0,10">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -440,28 +551,69 @@
                             </ListBox>
                         </Grid>
                     </Border>
-                    <TextBlock Grid.Row="4" Text="Activity" FontSize="20" FontWeight="Bold" Foreground="#17202D" />
-                    <ListBox Grid.Row="5"
-                             Margin="0,12,0,0"
-                             Background="Transparent"
-                             BorderThickness="0"
-                             ItemsSource="{Binding Activity}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="White"
-                                        BorderBrush="#E1E8F0"
-                                        BorderThickness="1"
-                                        CornerRadius="12"
-                                        Padding="10"
-                                        Margin="0,0,0,8">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Timestamp}" FontWeight="SemiBold" Foreground="#24548F" />
-                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,4,0,0" />
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                    <TextBlock Grid.Row="7" Text="History &amp; Activity" FontSize="20" FontWeight="Bold" Foreground="#17202D" />
+                    <TabControl Grid.Row="8"
+                                Margin="0,10,0,0"
+                                Background="Transparent"
+                                BorderBrush="#DDE6F0">
+                        <TabItem Header="History">
+                            <Grid Background="Transparent">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{Binding HistoryHeaderText}"
+                                           Foreground="#4F6073"
+                                           TextWrapping="Wrap"
+                                           Margin="8,8,8,6" />
+                                <ListBox Grid.Row="1"
+                                         Margin="4"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         ItemsSource="{Binding History}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="White"
+                                                    BorderBrush="#E1E8F0"
+                                                    BorderThickness="1"
+                                                    CornerRadius="12"
+                                                    Padding="10"
+                                                    Margin="0,0,0,8">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding TimestampText}" FontWeight="SemiBold" Foreground="#24548F" />
+                                                    <TextBlock Text="{Binding Title}" Margin="0,4,0,0" FontWeight="SemiBold" Foreground="#21364D" />
+                                                    <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                                    <TextBlock Text="{Binding FolderPath}" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#68798B" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="Activity">
+                            <ListBox Margin="4"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     ItemsSource="{Binding Activity}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="White"
+                                                BorderBrush="#E1E8F0"
+                                                BorderThickness="1"
+                                                CornerRadius="12"
+                                                Padding="10"
+                                                Margin="0,0,0,8">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Timestamp}" FontWeight="SemiBold" Foreground="#24548F" />
+                                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </TabItem>
+                    </TabControl>
                 </Grid>
             </Border>
         </Grid>
