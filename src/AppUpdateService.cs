@@ -14,7 +14,7 @@ public sealed class AppUpdateService
         {
             Timeout = TimeSpan.FromSeconds(20)
         };
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("ProjectReforgedPatchDownloader/2.3");
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("ProjectReforgedPatchDownloader/2.3.1");
     }
 
     public async Task<AppUpdateInfo?> LoadLatestReleaseAsync(string releaseApiUrl, string fallbackReleasePageUrl, CancellationToken cancellationToken)

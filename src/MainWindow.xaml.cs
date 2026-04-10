@@ -581,7 +581,7 @@ public partial class MainWindow : Window
         row.VerificationText = BuildVerificationText(row.Patch, manifestEntry, localLength);
         row.ReleaseNotesText = BuildReleaseNotesText(row.Patch);
 
-        if (NeedsRepair(row.Patch, manifestEntry, localLength))
+        if (NeedsRepair(manifestEntry, localLength))
         {
             row.Status = "Needs repair";
             row.StatusBrush = new SolidColorBrush(Color.FromRgb(253, 228, 228));
@@ -599,16 +599,9 @@ public partial class MainWindow : Window
         row.StatusBrush = new SolidColorBrush(Color.FromRgb(226, 244, 233));
     }
 
-    private bool NeedsRepair(PatchOption patch, PatchManifestEntry manifestEntry, long localLength)
+    private static bool NeedsRepair(PatchManifestEntry manifestEntry, long localLength)
     {
         if (manifestEntry.ContentLength > 0 && localLength != manifestEntry.ContentLength)
-        {
-            return true;
-        }
-
-        if (_metadataByUrl.TryGetValue(patch.DownloadUrl, out var metadata)
-            && metadata.ContentLength > 0
-            && localLength != metadata.ContentLength)
         {
             return true;
         }
@@ -735,13 +728,31 @@ public partial class MainWindow : Window
     {
         _viewState.SelectedCount = _allRows.Count(row => row.IsSelected).ToString();
         var updates = _allRows.Count(row => row.Status == "Update available");
+        var repairs = _allRows.Count(row => row.Status == "Needs repair");
         _viewState.CanUpdateInstalled = updates > 0 && !_viewState.IsDownloadInProgress;
         _viewState.CanRepairSelection = !_viewState.IsDownloadInProgress
             && (_allRows.Any(row => row.IsSelected && row.Status is "Needs repair" or "Downloaded" or "Update available")
                 || PatchGrid.SelectedItem is PatchRow selectedRow && selectedRow.Status is "Needs repair" or "Downloaded" or "Update available");
-        _viewState.UpdateAlertText = updates == 0
-            ? "No downloaded patches need updates"
-            : updates + " downloaded patch(es) have live updates";
+        _viewState.UpdateAlertText = BuildUpdateAlertText(updates, repairs);
+    }
+
+    private static string BuildUpdateAlertText(int updates, int repairs)
+    {
+        if (updates > 0)
+        {
+            return updates == 1
+                ? "1 downloaded patch has a live update"
+                : updates + " downloaded patches have live updates";
+        }
+
+        if (repairs > 0)
+        {
+            return repairs == 1
+                ? "1 tracked patch needs repair"
+                : repairs + " tracked patches need repair";
+        }
+
+        return "No downloaded patches need updates";
     }
 
     private void UpdateChangeSummary()

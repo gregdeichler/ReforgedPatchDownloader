@@ -17,7 +17,7 @@ public sealed class PatchDownloaderService
     {
         _httpClient = new HttpClient();
         _httpClient.Timeout = TimeSpan.FromSeconds(45);
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("ProjectReforgedPatchDownloader/2.3");
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("ProjectReforgedPatchDownloader/2.3.1");
         _jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true,

@@ -3,7 +3,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows-1f6cf0?style=for-the-badge)
 ![UI](https://img.shields.io/badge/UI-WPF-17314d?style=for-the-badge)
 ![Runtime](https://img.shields.io/badge/runtime-.NET%2010-c89b3c?style=for-the-badge)
-![Status](https://img.shields.io/badge/status-v2.3%20Release-1e884e?style=for-the-badge)
+![Status](https://img.shields.io/badge/status-v2.3.1%20Release-1e884e?style=for-the-badge)
 
 > A fast Windows desktop downloader for Project Reforged patches, with live catalog checks, update alerts, file verification, and repair tools.
 
@@ -25,9 +25,9 @@ It can:
 
 ## Screenshots
 
-### Current v2.3 interface
+### Current v2.3.1 interface
 
-![Project Reforged Patch Downloader v2.3](docs/screenshots/app-v2.3-main.png)
+![Project Reforged Patch Downloader v2.3.1](docs/screenshots/app-v2.3-main.png)
 
 ## Key Features
 
@@ -100,7 +100,7 @@ dotnet build .\ReforgedPatchDownloaderApp.csproj
 
 ## Release Files
 
-The packaged `v2.3` release includes:
+The packaged `v2.3.1` release includes:
 
 - `ReforgedPatchDownloaderApp.exe`
 - `ReforgedPatchDownloaderApp.dll`

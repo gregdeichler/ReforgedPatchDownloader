@@ -1,4 +1,4 @@
-Project Reforged Patch Downloader 2.3
+Project Reforged Patch Downloader 2.3.1
 
 What This Is
 - A Windows desktop downloader for Project Reforged patch modules
@@ -8,6 +8,7 @@ What It Does
 - Loads the live Project Reforged catalog
 - Shows patch descriptions, versions, dates, and file sizes
 - Highlights downloaded patches when live updates are available
+- Keeps the downloaded patch alert aligned with the live update list
 - Verifies local tracked files and flags repair issues
 - Handles linked patch sets and conflicting variants safely
 - Downloads directly into your chosen folder with visible progress
@@ -34,7 +35,7 @@ How To Use
 
 Important Files
 - README.md
-- RELEASE-NOTES-v2.3.md
+- RELEASE-NOTES-v2.3.1.md
 - docs\screenshots\app-v2.3-main.png
 
 Default Folder
